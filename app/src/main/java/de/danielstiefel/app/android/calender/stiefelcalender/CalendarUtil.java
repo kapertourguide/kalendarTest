@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.Date;
 
@@ -29,16 +30,29 @@ public class CalendarUtil {
     static final int MY_CAL_REQ = 11001;
     static final int MY_CAL_WRITE_REQ = 11002;
 
+    static final String TEST_APP_CALENDAR_NAME = "TestApp Calendar";
+    static final String TEST_APP_CALENDAR_DISPLAY_NAME = "TestApp Calendar";
+    static final String TEST_APP_CALENDAR_ACCOUNT_NAME = "TestAppCalendar@Account.name";
+    static final String TEST_APP_CALENDAR_ACCOUNT_TYPE = "testapp.calendar.accounttype";
+
+
     static public void addCalendar(Activity activity) {
 
+        int calenderExist = checkIfCalenderExist(activity, TEST_APP_CALENDAR_ACCOUNT_NAME, TEST_APP_CALENDAR_ACCOUNT_TYPE);
+        if( calenderExist > 0){
+            String text = "Kalender " + TEST_APP_CALENDAR_ACCOUNT_NAME + " existiert bereits.";
+            Toast.makeText(activity, text, Toast.LENGTH_LONG).show();
+            return;
+        }
+
         ContentValues contentValues = new ContentValues();
-        contentValues.put(CalendarContract.Calendars.ACCOUNT_NAME, "cal@zoftino.com");
-        contentValues.put(CalendarContract.Calendars.ACCOUNT_TYPE, "cal.zoftino.com");
-        contentValues.put(CalendarContract.Calendars.NAME, "zoftino calendar");
-        contentValues.put(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, "Zoftino.com Calendar");
-        contentValues.put(CalendarContract.Calendars.CALENDAR_COLOR, "232323");
+        contentValues.put(CalendarContract.Calendars.ACCOUNT_NAME,      TEST_APP_CALENDAR_ACCOUNT_NAME);
+        contentValues.put(CalendarContract.Calendars.ACCOUNT_TYPE,      TEST_APP_CALENDAR_ACCOUNT_TYPE);
+        contentValues.put(CalendarContract.Calendars.NAME,              TEST_APP_CALENDAR_NAME);
+        contentValues.put(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, TEST_APP_CALENDAR_DISPLAY_NAME);
+        contentValues.put(CalendarContract.Calendars.CALENDAR_COLOR,    "232323");
         contentValues.put(CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL, CalendarContract.Calendars.CAL_ACCESS_OWNER);
-        contentValues.put(CalendarContract.Calendars.OWNER_ACCOUNT, "cal@zoftino.com");
+        contentValues.put(CalendarContract.Calendars.OWNER_ACCOUNT,     TEST_APP_CALENDAR_ACCOUNT_NAME);
         contentValues.put(CalendarContract.Calendars.ALLOWED_REMINDERS, "METHOD_ALERT, METHOD_EMAIL, METHOD_ALARM");
         contentValues.put(CalendarContract.Calendars.ALLOWED_ATTENDEE_TYPES, "TYPE_OPTIONAL, TYPE_REQUIRED, TYPE_RESOURCE");
         contentValues.put(CalendarContract.Calendars.ALLOWED_AVAILABILITY, "AVAILABILITY_BUSY, AVAILABILITY_FREE, AVAILABILITY_TENTATIVE");
@@ -50,14 +64,54 @@ public class CalendarUtil {
 
         Uri uri = CalendarContract.Calendars.CONTENT_URI;
         uri = uri.buildUpon().appendQueryParameter(android.provider.CalendarContract.CALLER_IS_SYNCADAPTER, "true")
-                .appendQueryParameter(CalendarContract.Calendars.ACCOUNT_NAME, "cal@zoftino.com")
-                .appendQueryParameter(CalendarContract.Calendars.ACCOUNT_TYPE, "cal.zoftino.com").build();
+                .appendQueryParameter(CalendarContract.Calendars.ACCOUNT_NAME, TEST_APP_CALENDAR_ACCOUNT_NAME)
+                .appendQueryParameter(CalendarContract.Calendars.ACCOUNT_TYPE, TEST_APP_CALENDAR_ACCOUNT_TYPE).build();
         activity.getContentResolver().insert(uri, contentValues);
     }
 
+    private static int checkIfCalenderExist(final Activity activity, String accountName, String accountType) {
 
-    static public void getDataFromCalendarTable(final Activity activity, ListView listView) {
-        Cursor cur = null;
+        Cursor cur = findCalendar(activity, accountName, accountType);
+
+        if(cur.getCount() > 0){
+            return cur.getCount();
+        } else {
+            return -1;
+        }
+    }
+
+    private static Cursor findCalendar(Activity activity, String accountName, String accountType) {
+
+        ContentResolver cr = activity.getContentResolver();
+        Uri uri = CalendarContract.Calendars.CONTENT_URI;
+        String selection = "((" + CalendarContract.Calendars.ACCOUNT_NAME + " = ?) AND ("
+                + CalendarContract.Calendars.ACCOUNT_TYPE + " = ?))";
+        String[] selectionArgs = new String[]{accountName, accountType};
+
+        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.READ_CALENDAR}, MY_CAL_REQ);
+        }
+
+        return cr.query(uri, null, selection, selectionArgs, null);
+    }
+
+    static public Cursor getAllEntriesFromCalenderTable(final Activity activity){
+
+        ContentResolver cr = activity.getContentResolver();
+
+        Uri uri = CalendarContract.Calendars.CONTENT_URI;
+
+        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.READ_CALENDAR}, MY_CAL_REQ);
+        }
+        Cursor cur = cr.query(uri, null, null, null, null);
+
+        return cur;
+    }
+
+    @Deprecated
+    static public void getDataFromCalendarTable_old(final Activity activity, ListView listView) {
+
         ContentResolver cr = activity.getContentResolver();
 
         String[] mProjection =
@@ -70,16 +124,11 @@ public class CalendarUtil {
                 };
 
         Uri uri = CalendarContract.Calendars.CONTENT_URI;
-        String selection = "((" + CalendarContract.Calendars.ACCOUNT_NAME + " = ?) AND ("
-                + CalendarContract.Calendars.ACCOUNT_TYPE + " = ?) AND ("
-                + CalendarContract.Calendars.OWNER_ACCOUNT + " = ?))";
-        String[] selectionArgs = new String[]{"cal@zoftino.com", "cal.zoftino.com",
-                "cal@zoftino.com"};
 
         if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.READ_CALENDAR}, MY_CAL_REQ);
         }
-        cur = cr.query(uri, null, null, null, null);
+        Cursor cur = cr.query(uri, null, null, null, null);
 
 
         final MyCalenderAdapter myCalenderAdapter = new MyCalenderAdapter(activity, cur, 0);
@@ -88,9 +137,9 @@ public class CalendarUtil {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String item = (String) myCalenderAdapter.getItem(position);
+                MyCalenderObject item = (MyCalenderObject) myCalenderAdapter.getItem(position);
                 Intent myIntent = new Intent(activity, ActivityEvents.class);
-                myIntent.putExtra(CalendarUtil.MY_CAL_ID_AS_INTENTPARAM, item);
+                myIntent.putExtra(CalendarUtil.MY_CAL_ID_AS_INTENTPARAM, item.getId());
                 activity.startActivity(myIntent);
             }
         });
@@ -166,22 +215,18 @@ endTime.set(2017, 07, 15, 10, 35);
 
         return cur = cr.query(uri, null, selection, selectionArgs, null);
 
-/*        while (cur.moveToNext()) {
-            String title = cur.getString(cur.getColumnIndex(CalendarContract.Events.TITLE));
-            String accountName = cur.getString(cur.getColumnIndex(CalendarContract.Events.ACCOUNT_NAME));
-            int eid = cur.getInt(cur.getColumnIndex(CalendarContract.Events._ID));
-            int calendarID = cur.getInt(cur.getColumnIndex(CalendarContract.Events.CALENDAR_ID));
-            long start = cur.getLong(cur.getColumnIndex(CalendarContract.Events.DTSTART));
-            long end = cur.getLong(cur.getColumnIndex(CalendarContract.Events.DTEND));
-
-
-            TextView tv1 =  new TextView(activity);
-            tv1.setText(title);
-            //cont.addView(tv1);
-            Log.i("CALENDER_TEST", "Read Event: ()" +eid + " " + title + " " + accountName + " " + calendarID + " " + start + " " + end);
-        }*/
-
     }
 
+    static public Cursor getDataFromEventTable(Activity activity, int calId) {
+        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.READ_CALENDAR}, MY_CAL_REQ);
+        }
+
+        String selection = CalendarContract.Events.CALENDAR_ID + " = ? ";
+        String[] selectionArgs = new String[]{String.valueOf(calId)};
+
+        return activity.getContentResolver().query(CalendarContract.Events.CONTENT_URI, null, selection, selectionArgs, null);
+
+    }
 
 }

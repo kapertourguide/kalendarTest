@@ -23,6 +23,7 @@ public class MyCalenderAdapter extends CursorAdapter {
     }
 
     public void bindView(View view, Context context, Cursor cursor) {
+
         TextView textViewTitle = (TextView) view.findViewById(R.id.row_calendar_title);
         String title = cursor.getString( cursor.getColumnIndex( CalendarContract.Calendars.CALENDAR_DISPLAY_NAME ) );
         textViewTitle.setText(title);
@@ -41,8 +42,13 @@ public class MyCalenderAdapter extends CursorAdapter {
     @Override
     public Object getItem(int position) {
         Object item = super.getItem(position);
-        int columnIndex = cursor.getColumnIndex(CalendarContract.Calendars.ACCOUNT_NAME);
-        String string = cursor.getString(columnIndex);
-        return string;
+
+        MyCalenderObject calenderObject = new MyCalenderObject();
+        calenderObject.setId(           cursor.getInt( cursor.getColumnIndex( CalendarContract.Calendars._ID)));
+        calenderObject.setAccountName(  cursor.getString( cursor.getColumnIndex( CalendarContract.Calendars.ACCOUNT_NAME)));
+        calenderObject.setDisplayName(  cursor.getString( cursor.getColumnIndex( CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)));
+        calenderObject.setName(         cursor.getString( cursor.getColumnIndex( CalendarContract.Calendars.NAME)));
+
+        return calenderObject;
     }
 }

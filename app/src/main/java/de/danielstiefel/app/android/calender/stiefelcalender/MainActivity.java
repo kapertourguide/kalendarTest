@@ -1,8 +1,12 @@
 package de.danielstiefel.app.android.calender.stiefelcalender;
 
+import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.CalendarContract;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -12,7 +16,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 //http://www.zoftino.com/how-to-read-and-write-calendar-data-in-android
 
@@ -21,6 +27,8 @@ public class MainActivity extends AppCompatActivity
 
 
     private ListView listView;
+    private MainActivity context;
+    private MyCalenderAdapter myCalenderAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +37,7 @@ public class MainActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         listView = (ListView) findViewById(R.id.calendarListView);
         setSupportActionBar(toolbar);
+        context = this;
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -49,7 +58,40 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        initCalendar();
+        initCalendarList();
+    }
+
+    private void initCalendarList() {
+
+        Cursor cursor = CalendarUtil.getAllEntriesFromCalenderTable(context);
+        myCalenderAdapter = new MyCalenderAdapter(this, cursor, 0);
+        listView.setAdapter(myCalenderAdapter);
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                MyCalenderObject item = (MyCalenderObject) myCalenderAdapter.getItem(position);
+                Intent myIntent = new Intent(context, ActivityEvents.class);
+                int calId = item.getId();
+                myIntent.putExtra( CalendarUtil.MY_CAL_ID_AS_INTENTPARAM, calId);
+                context.startActivity(myIntent);
+            }
+        });
+
+        while (cursor.moveToNext()) {
+            String displayName = cursor.getString( cursor.getColumnIndex(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME));
+            String accountName = cursor.getString( cursor.getColumnIndex(CalendarContract.Calendars.ACCOUNT_NAME));
+
+            int columnIndex = cursor.getColumnIndex(CalendarContract.Calendars._ID);
+            int calenderId = cursor.getInt(columnIndex);
+
+            TextView tv1 = new TextView(this);
+            tv1.setText(displayName);
+            Log.i("CALENDER_TEST", "Read - Result (id/displayName/accountName): ("+ calenderId+"/" + displayName+"/"+accountName+")");
+        }
+
+
+
     }
 
     private void initCalendar() {
@@ -57,7 +99,9 @@ public class MainActivity extends AppCompatActivity
 
         //CalendarUtil.addCalendar(this);
         CalendarUtil.addEvent(this);
-        CalendarUtil.getDataFromCalendarTable(this, listView);
+        CalendarUtil.getDataFromCalendarTable_old(this, listView);
+
+
         //CalendarUtil.getDataFromEventTable(this, "cal.zoftino.com");
 
     }
@@ -101,7 +145,10 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_camera) {
-            // Handle the camera action
+
+            CalendarUtil.addCalendar(this);
+            this.myCalenderAdapter.swapCursor(CalendarUtil.getAllEntriesFromCalenderTable(context));
+
         } else if (id == R.id.nav_gallery) {
 
         } else if (id == R.id.nav_slideshow) {

@@ -4,6 +4,8 @@ import android.database.Cursor;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
@@ -18,6 +20,12 @@ public class ActivityEvents extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.setDrawerListener(toggle);
+        toggle.syncState();
+
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -27,13 +35,13 @@ public class ActivityEvents extends AppCompatActivity {
             }
         });
 
-        String accountName = getIntent().getStringExtra(CalendarUtil.MY_CAL_ID_AS_INTENTPARAM);
+        int calID = getIntent().getIntExtra(CalendarUtil.MY_CAL_ID_AS_INTENTPARAM, -1);
         ListView eventList = (ListView) findViewById(R.id.eventListView);
 
-        Cursor fromEventTable = CalendarUtil.getDataFromEventTable(this, accountName);
-
-        eventList.setAdapter( new MyEventAdapter(this, fromEventTable, 0));
-
+        if( calID != -1) {
+            Cursor fromEventTable = CalendarUtil.getDataFromEventTable(this, calID);
+            eventList.setAdapter(new MyEventAdapter(this, fromEventTable, 0));
+        }
 
     }
 
